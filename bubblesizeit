@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+
+import av
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
+import sys
+
+from skimage import data, color
+from skimage.io import imread
+from skimage.transform import hough_circle, hough_circle_peaks
+from skimage.feature import canny
+from skimage.draw import circle_perimeter
+from skimage.util import img_as_ubyte
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+
+def video_to_images(video_path):
+    logger.info("Converting video to individual frames")
+    video = av.open(video_path)
+    for packet in video.demux():
+        for frame in packet.decode():
+            if isinstance(frame, av.video.frame.VideoFrame) and not frame.is_corrupt:
+                yield np.asarray(frame.to_image())
+                
+
+def determine_bubble_sizes_in_img(img_frame, debug=False):
+    image = img_as_ubyte(color.rgb2gray(img_frame)[400:700, 450:])
+    edges = canny(image, sigma=3, low_threshold=20, high_threshold=50)
+    
+    hough_radii = np.arange(5, 20, 2)
+    hough_res = hough_circle(edges, hough_radii)
+
+    _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=10, 
+                                          min_xdistance=10, min_ydistance=10)
+    
+    if debug:
+        fig, axes = plt.subplots(nrows=2, sharex=True, sharey=True)
+        axes[0].imshow(edges, cmap=plt.cm.gray)
+        image = color.gray2rgb(image)
+        for center_y, center_x, radius in zip(cy, cx, radii):
+            circy, circx = circle_perimeter(center_y, center_x, radius)
+            image[circy, circx] = (220, 20, 20)
+        axes[1].imshow(image, cmap=plt.cm.gray)
+        plt.show()
+
+    return radii 
+
+
+if __name__ == "__main__":
+    import argparse
+
+    p = argparse.ArgumentParser()
+    p.add_argument("--debug", default=False, action="store_true")
+    p.add_argument("video", help="Path to a video file")
+    args = p.parse_args()
+    
+    radii_per_frame = []
+    for index, frame in enumerate(video_to_images(args.video)):
+        logger.info("Processing video frame %d", index)
+        radii_per_frame.append(
+            determine_bubble_sizes_in_img(frame, debug=args.debug)
+        )
+    radii = np.asarray(radii_per_frame).flatten()
+
+    fig, ax = plt.subplots()
+    ax.hist(radii)
+    fig.savefig(args.video + ".png", dpi=600)

@@ -9,9 +9,9 @@ $ pip install -r requirements.txt
 ## Execution
 
 ```bash
-$ ./dropleter data/vides/1-microlitre.avi
+$ ./main data/vides/1-microlitre.avi
 ```
 
 ```bash
-$ ./dropleter --debug data/vides/1-microlitre.avi
+$ ./main --debug data/vides/1-microlitre.avi
 ```

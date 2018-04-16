@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 
+__author__ = "Felix Simkovic"
+__date__ = "16 Apr 2018"
+__version__ = "0.1"
+
 import av
 import logging
 import numpy as np
+import matplotlib.collections as mcoll
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import sys
 
-from skimage import data, color
+from skimage import color
 from skimage.io import imread
 from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
@@ -19,22 +25,28 @@ logger = logging.getLogger()
 
 def video_to_images(video_path):
     logger.info("Converting video to individual frames")
-    video = av.open(video_path)
-    for packet in video.demux():
-        for frame in packet.decode():
-            if isinstance(frame, av.video.frame.VideoFrame) and not frame.is_corrupt:
-                yield np.asarray(frame.to_image())
+    container = av.open(video_path)
+    for frame in container.decode(video=0):
+        yield np.asarray(frame.to_image())
                 
 
 def determine_bubble_sizes_in_img(img_frame, debug=False):
-    image = img_as_ubyte(color.rgb2gray(img_frame)[400:700, 450:])
+    box = [650, 450, 50, 150]  # x, y, width, height
+
+    if debug:
+        fig, ax = plt.subplots()
+        ax.imshow(img_frame)
+        rect = mpatches.Rectangle((box[0], box[1]), box[2], box[3])
+        ax.add_collection(mcoll.PatchCollection([rect], facecolor="none", edgecolor="#ff0000"))
+        plt.show()
+
+    image = img_as_ubyte(color.rgb2gray(img_frame)[box[1]:box[1]+box[3], box[0]:box[0]+box[2]])
     edges = canny(image, sigma=3, low_threshold=20, high_threshold=50)
     
-    hough_radii = np.arange(5, 20, 2)
+    hough_radii = np.arange(8, 16, 1)
     hough_res = hough_circle(edges, hough_radii)
 
-    _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=10, 
-                                          min_xdistance=10, min_ydistance=10)
+    _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=1)
     
     if debug:
         fig, axes = plt.subplots(nrows=2, sharex=True, sharey=True)
@@ -59,10 +71,11 @@ if __name__ == "__main__":
     
     radii_per_frame = []
     for index, frame in enumerate(video_to_images(args.video)):
-        logger.info("Processing video frame %d", index)
-        radii_per_frame.append(
-            determine_bubble_sizes_in_img(frame, debug=args.debug)
-        )
+        if index % 2 == 0:
+            logger.info("Processing video frame %d", index)
+            radii_per_frame.append(
+                determine_bubble_sizes_in_img(frame, debug=args.debug)
+            )
     radii = np.asarray(radii_per_frame).flatten()
 
     fig, ax = plt.subplots()

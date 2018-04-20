@@ -57,12 +57,6 @@ class VideoOutSk(Video):
         self._lock = True
  
 
-def imshow(frame, cmap=plt.cm.gray):
-    fig, ax = plt.subplots()
-    ax.imshow(frame, cmap=cmap)
-    plt.show()
-
-
 def determine_bubble_sizes_in_img(frame, debug=False):
     if debug:
         imshow(frame)
@@ -92,6 +86,12 @@ def determine_bubble_sizes_in_img(frame, debug=False):
         imshow(frame)
 
     return radii, frame
+
+
+def imshow(frame, cmap=plt.cm.gray):
+    fig, ax = plt.subplots()
+    ax.imshow(frame, cmap=cmap)
+    plt.show()
 
 
 if __name__ == "__main__":

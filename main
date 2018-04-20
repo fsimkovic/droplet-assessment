@@ -13,52 +13,85 @@ import matplotlib.patches as mpatches
 import sys
 
 from skimage import color
+from skimage.draw import circle_perimeter
+from skimage.feature import canny
 from skimage.io import imread
 from skimage.transform import hough_circle, hough_circle_peaks
-from skimage.feature import canny
-from skimage.draw import circle_perimeter
 from skimage.util import img_as_ubyte
+
+from skvideo.io import LibAVWriter, vreader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 
-def video_to_images(video_path):
-    logger.info("Converting video to individual frames")
-    container = av.open(video_path)
-    for frame in container.decode(video=0):
-        yield np.asarray(frame.to_image())
-                
+class Video(object):
+    def __init__(self, path):
+        self.path = path
 
-def determine_bubble_sizes_in_img(img_frame, debug=False):
-    box = [650, 450, 50, 150]  # x, y, width, height
 
+class VideoInSk(Video):
+    def __init__(self, path):
+        logger.info("Instantiated Skimage video reader")
+        super(VideoInSk, self).__init__(path)
+
+    @property
+    def frames(self):
+        for frame in vreader(self.path):
+            yield frame
+
+
+class VideoOutSk(Video):
+    def __init__(self, path):
+        super(VideoOutSk, self).__init__(path)
+        self._container = LibAVWriter(path)
+        self._lock = False
+
+    def add(self, frame):
+        if self._lock:
+            raise RuntimeError("Video is locked!")
+        self._container.writeFrame(frame)
+
+    def save(self):
+        self._container.close()
+        self._lock = True
+ 
+
+def imshow(frame, cmap=plt.cm.gray):
+    fig, ax = plt.subplots()
+    ax.imshow(frame, cmap=cmap)
+    plt.show()
+
+
+def determine_bubble_sizes_in_img(frame, debug=False):
     if debug:
-        fig, ax = plt.subplots()
-        ax.imshow(img_frame)
-        rect = mpatches.Rectangle((box[0], box[1]), box[2], box[3])
-        ax.add_collection(mcoll.PatchCollection([rect], facecolor="none", edgecolor="#ff0000"))
-        plt.show()
+        imshow(frame)
 
-    image = img_as_ubyte(color.rgb2gray(img_frame)[box[1]:box[1]+box[3], box[0]:box[0]+box[2]])
-    edges = canny(image, sigma=3, low_threshold=20, high_threshold=50)
-    
+    grayscale = color.rgb2gray(frame)
+    if debug:
+        imshow(grayscale)
+
+    box = [650, 450, 50, 150]  # x, y, width, height
+    subframe = grayscale[box[1]:box[1]+box[3], box[0]:box[0]+box[2]]
+    if debug:
+        imshow(subframe)
+
+    edges = canny(subframe, sigma=3)
+    if debug:
+        imshow(edges)
+
     hough_radii = np.arange(8, 16, 1)
     hough_res = hough_circle(edges, hough_radii)
-
     _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=1)
+
+    for center_x, center_y, radius in zip(cx, cy, radii):
+        circy, circx = circle_perimeter(center_y, center_x, radius)
+        frame[circy + box[1], circx + box[0]] = (220, 20, 20)
     
     if debug:
-        fig, axes = plt.subplots(nrows=2, sharex=True, sharey=True)
-        axes[0].imshow(edges, cmap=plt.cm.gray)
-        image = color.gray2rgb(image)
-        for center_y, center_x, radius in zip(cy, cx, radii):
-            circy, circx = circle_perimeter(center_y, center_x, radius)
-            image[circy, circx] = (220, 20, 20)
-        axes[1].imshow(image, cmap=plt.cm.gray)
-        plt.show()
+        imshow(frame)
 
-    return radii 
+    return radii, frame
 
 
 if __name__ == "__main__":
@@ -66,18 +99,24 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser()
     p.add_argument("--debug", default=False, action="store_true")
-    p.add_argument("video", help="Path to a video file")
+    p.add_argument("-o", "--output", help="Path for the output video file")
+    p.add_argument("videos", nargs="+", help="Path to a video file")
     args = p.parse_args()
     
-    radii_per_frame = []
-    for index, frame in enumerate(video_to_images(args.video)):
-        if index % 2 == 0:
+
+    radii_per_video_per_frame = []
+    for video in args.videos:
+        #  vidout = VideoOutSk(video + "out.mp4")
+        radii_per_video_per_frame.append([])
+        for index, frame in enumerate(VideoInSk(video).frames):
+            if index % 2 > 0:
+                continue
             logger.info("Processing video frame %d", index)
-            radii_per_frame.append(
-                determine_bubble_sizes_in_img(frame, debug=args.debug)
-            )
-    radii = np.asarray(radii_per_frame).flatten()
+            radii, frame_ = determine_bubble_sizes_in_img(frame, debug=args.debug)
+            radii_per_video_per_frame[-1].extend(radii)
+            #  vidout.add(frame_)
+        #  vidout.save()
 
     fig, ax = plt.subplots()
-    ax.hist(radii)
-    fig.savefig(args.video + ".png", dpi=600)
+    ax.hist(radii_per_video_per_frame, bins=np.arange(5, 21))
+    fig.savefig("test.png", dpi=600)

@@ -52,6 +52,7 @@ def imshow(frame, cmap=plt.cm.gray):
 
 
 def hist(radii_per_video_per_frame, fname="test.png"):
+    bins = np.arange(np.min(radii_per_video_per_frame), np.max(radii_per_video_per_frame)+1)
     fig, ax = plt.subplots()
-    ax.hist(radii_per_video_per_frame, bins=np.arange(min(radii), max(radii)))
+    ax.hist(radii_per_video_per_frame, bins=bins)
     fig.savefig(fname, dpi=600)

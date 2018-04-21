@@ -24,17 +24,19 @@ if __name__ == "__main__":
     args = p.parse_args()
     
     radii_per_video_per_frame = []
-    for video in args.videos:
+    for vindex, video in enumerate(args.videos):
+        logger.info("Working on video %d", vindex)
         #  vidout = VideoOutSk(video + "out.mp4")
         radii_per_video_per_frame.append([])
-        for index, frame in enumerate(VideoInSk(video).frames):
-            if index % 2 > 0:
+        for findex, frame in enumerate(VideoInSk(video).frames):
+            if findex % 2 > 0:
                 continue
-            logger.info("Processing video frame %d", index)
+            logger.debug("Processing video frame %d", findex)
             radii, frame_ = determine_droplet_sizes_in_frame(frame, debug=args.debug)
             radii_per_video_per_frame[-1].extend(radii)
             #  vidout.add(frame_)
         #  vidout.save()
-
+        logger.info("Droplets counted in last frame: %d", len(radii_per_video_per_frame[-1]))
+    
     hist(radii_per_video_per_frame)
 

@@ -51,8 +51,20 @@ def imshow(frame, cmap=plt.cm.gray):
     plt.show()
 
 
+def minmax(numbers):
+    min_, max_ = 10^6, 0
+    for array in numbers:
+        for n in array:
+            if n < min_:
+                min_ = n
+            if n > max_:
+                max_ = n
+    return min_, max_
+
 def hist(radii_per_video_per_frame, fname="test.png"):
-    bins = np.arange(np.min(radii_per_video_per_frame), np.max(radii_per_video_per_frame)+1)
+    min_, max_ = minmax(radii_per_video_per_frame)
+    labels = ["video %d" % (i + 1) for i in range(len(radii_per_video_per_frame))]
     fig, ax = plt.subplots()
-    ax.hist(radii_per_video_per_frame, bins=bins)
+    ax.hist(radii_per_video_per_frame, bins=range(min_, max_ + 1), label=labels)
+    ax.legend()
     fig.savefig(fname, dpi=600)

@@ -25,7 +25,7 @@ if __name__ == "__main__":
     
     radii_per_video_per_frame = []
     for vindex, video in enumerate(args.videos):
-        logger.info("Working on video %d", vindex)
+        logger.info("Working on video %d", vindex + 1)
         #  vidout = VideoOutSk(video + "out.mp4")
         radii_per_video_per_frame.append([])
         for findex, frame in enumerate(VideoInSk(video).frames):

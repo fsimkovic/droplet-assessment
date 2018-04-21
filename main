@@ -29,8 +29,6 @@ if __name__ == "__main__":
         #  vidout = VideoOutSk(video + "out.mp4")
         radii_per_video_per_frame.append([])
         for findex, frame in enumerate(VideoInSk(video).frames):
-            if findex % 2 > 0:
-                continue
             logger.debug("Processing video frame %d", findex)
             radii, frame_ = determine_droplet_sizes_in_frame(frame, debug=args.debug)
             radii_per_video_per_frame[-1].extend(radii)

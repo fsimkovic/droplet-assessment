@@ -7,7 +7,7 @@ from skimage import color
 from skimage.draw import circle_perimeter
 from skimage.feature import canny
 from skimage.io import imread
-from skimage.transform import hough_circle, hough_circle_peaks
+from skimage.transform import hough_circle, hough_circle_peaks, hough_line, hough_line_peaks
 from skimage.util import img_as_ubyte
 
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
     if debug:
         imshow(grayscale)
 
-    box = [650, 450, 50, 150]  # x, y, width, height
+    box = [450, 450, 1000, 150]  # x, y, width, height
     subframe = grayscale[box[1]:box[1]+box[3], box[0]:box[0]+box[2]]
     if debug:
         imshow(subframe)
@@ -33,15 +33,42 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
 
     hough_radii = np.arange(8, 16, 1)
     hough_res = hough_circle(edges, hough_radii)
-    _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=1)
+    _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=10)
 
+    measured = np.zeros(edges.shape)
     for center_x, center_y, radius in zip(cx, cy, radii):
         circy, circx = circle_perimeter(center_y, center_x, radius)
-        frame[circy + box[1], circx + box[0]] = (220, 20, 20)
+        try:
+            frame[circy + box[1], circx + box[0]] = (220, 20, 20)
+            measured[circy, circx] = 1
+        except:
+            pass
+
+    #  hspace, angles, dists = hough_line(edges)
+    #  x = np.arange(subframe.shape[1])
+    #  points = []
+    #  for _, angle, dist in zip(*hough_line_peaks(hspace, angles, dists, num_peaks=2)):
+    #      y_bound = [
+    #          (dist - 0 * np.cos(angle)) / np.sin(angle),
+    #          (dist - subframe.shape[1] * np.cos(angle)) / np.sin(angle)
+    #      ]
+    #      y = np.floor((y_bound[1] - y_bound[0]) / (x[-1] - x[0]) * x + y_bound[0]).astype(int)
+    #      frame[y + box[1], x + box[0]] = (220, 20, 20)
+    #      measured[y, x] = 1
+    #      points.append([[x[0], y[0]], [x[-1], y[-1]]])
+    #  points = np.asarray(points)
+    #  dist = np.mean(np.sqrt(np.sum((points[1] - points[0])**2, axis=1)))
+    #  dist_factor = dist / 50.
+
+    #  if debug:
+    #      imshow(measured)
     
     if debug:
         imshow(frame)
 
+    # Size is average of observed, should probably take mode of distribution
+    # Converts radii to litres
+    radii = radii / np.mean([2.43, 2.21, 2.23, 2.25, 2.27])
     return radii, frame
 
 
@@ -63,8 +90,10 @@ def minmax(numbers):
 
 def hist(radii_per_video_per_frame, fname="test.png"):
     min_, max_ = minmax(radii_per_video_per_frame)
-    labels = ["video %d" % (i + 1) for i in range(len(radii_per_video_per_frame))]
+    labels = ["%d-microlitre" % (i + 1) for i in range(len(radii_per_video_per_frame))]
     fig, ax = plt.subplots()
-    ax.hist(radii_per_video_per_frame, bins=range(min_, max_ + 1), label=labels)
+    ax.hist(radii_per_video_per_frame, bins=np.arange(min_, max_ + 1, 0.2), label=labels)
     ax.legend()
+    ax.set_xlabel(r"Droplet radius ($\mu$m)")
+    ax.set_ylabel("Count")
     fig.savefig(fname, dpi=600)

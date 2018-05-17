@@ -107,11 +107,11 @@ def minmax(numbers):
     return min_, max_
 
 
-def hist(radii_per_video_per_frame, fname="test.png"):
+def hist(radii_per_video_per_frame, fname='output.png', bin_=0.5):
     min_, max_ = minmax(radii_per_video_per_frame)
     labels = ["%d-microlitre" % (i + 1) for i in range(len(radii_per_video_per_frame))]
     fig, ax = plt.subplots()
-    ax.hist(radii_per_video_per_frame, bins=np.arange(min_, max_ + 1, 0.2), label=labels)
+    ax.hist(radii_per_video_per_frame, bins=np.arange(min_, max_ + 1, bin_), label=labels)
     ax.legend()
     ax.set_xlabel(r"Droplet radius ($\mu$m)")
     ax.set_ylabel("Count")

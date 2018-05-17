@@ -1,4 +1,3 @@
-
 __author__ = "Felix Simkovic"
 __date__ = "16 Apr 2018"
 __version__ = "0.1"
@@ -23,7 +22,7 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
         imshow(grayscale)
 
     box = [450, 450, 1000, 150]  # x, y, width, height
-    subframe = grayscale[box[1]:box[1]+box[3], box[0]:box[0]+box[2]]
+    subframe = grayscale[box[1]:box[1] + box[3], box[0]:box[0] + box[2]]
     if debug:
         imshow(subframe)
 
@@ -31,12 +30,34 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
     if debug:
         imshow(edges)
 
-    hough_radii = np.arange(8, 16, 1)
+    hough_radii = np.arange(8, 14, 1)
     hough_res = hough_circle(edges, hough_radii)
     _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=10)
+    cx, cy, radii = cx[::1], cy[::1], radii[::1]
+
+    cx_, cy_, radii_ = [cx[0]], [cy[0]], [radii[0]]
+    for i in range(1, len(cx)):
+        keeper = True
+
+        for x, y, r in zip(cx_, cy_, radii_):
+            thres = r if r > radii[i] else radii[i]
+            if abs(cx[i] - x) <= thres and abs(cy[i] - y) <= thres:
+                keeper = False
+                break
+    #
+    #      if subframe[cy[i], cx[i]] > 0.4:
+    #          keeper = False
+    #
+    #      if cx[i] < 50 or cy[i] < 50 or cy[i] > box[3] - 50:
+    #          keeper = False
+
+        if keeper:
+            cx_.append(cx[i])
+            cy_.append(cy[i])
+            radii_.append(radii[i])
 
     measured = np.zeros(edges.shape)
-    for center_x, center_y, radius in zip(cx, cy, radii):
+    for center_x, center_y, radius in zip(cx_, cy_, radii_):
         circy, circx = circle_perimeter(center_y, center_x, radius)
         try:
             frame[circy + box[1], circx + box[0]] = (220, 20, 20)
@@ -44,31 +65,28 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
         except:
             pass
 
+    if debug:
+        imshow(frame)
+
+    #--- This code was used to establish estimates for the correction factors ---#
     #  hspace, angles, dists = hough_line(edges)
     #  x = np.arange(subframe.shape[1])
     #  points = []
     #  for _, angle, dist in zip(*hough_line_peaks(hspace, angles, dists, num_peaks=2)):
-    #      y_bound = [
-    #          (dist - 0 * np.cos(angle)) / np.sin(angle),
-    #          (dist - subframe.shape[1] * np.cos(angle)) / np.sin(angle)
-    #      ]
+    #      y_bound = [(dist - 0 * np.cos(angle)) / np.sin(angle),
+    #                 (dist - subframe.shape[1] * np.cos(angle)) / np.sin(angle)]
     #      y = np.floor((y_bound[1] - y_bound[0]) / (x[-1] - x[0]) * x + y_bound[0]).astype(int)
     #      frame[y + box[1], x + box[0]] = (220, 20, 20)
-    #      measured[y, x] = 1
+    #      measured[y - 1, x - 1] = 1
     #      points.append([[x[0], y[0]], [x[-1], y[-1]]])
     #  points = np.asarray(points)
     #  dist = np.mean(np.sqrt(np.sum((points[1] - points[0])**2, axis=1)))
-    #  dist_factor = dist / 50.
-
+    #  dist_factor = dist / 250.
+    #  print(dist_factor)
+    #
     #  if debug:
     #      imshow(measured)
-    
-    if debug:
-        imshow(frame)
 
-    # Size is average of observed, should probably take mode of distribution
-    # Converts radii to litres
-    radii = radii / np.mean([2.43, 2.21, 2.23, 2.25, 2.27])
     return radii, frame
 
 
@@ -79,7 +97,7 @@ def imshow(frame, cmap=plt.cm.gray):
 
 
 def minmax(numbers):
-    min_, max_ = 10^6, 0
+    min_, max_ = 10 ^ 6, 0
     for array in numbers:
         for n in array:
             if n < min_:
@@ -87,6 +105,7 @@ def minmax(numbers):
             if n > max_:
                 max_ = n
     return min_, max_
+
 
 def hist(radii_per_video_per_frame, fname="test.png"):
     min_, max_ = minmax(radii_per_video_per_frame)

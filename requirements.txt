@@ -1,4 +1,4 @@
-av
 matplotlib
 numpy
 scikit-image
+scikit-video

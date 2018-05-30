@@ -11,6 +11,7 @@ from skimage.util import img_as_ubyte
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 
 def determine_droplet_sizes_in_frame(frame, debug=False):
@@ -32,7 +33,8 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
 
     hough_radii = np.arange(8, 14, 1)
     hough_res = hough_circle(edges, hough_radii)
-    _, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii, total_num_peaks=10)
+    _, cx, cy, radii = hough_circle_peaks(
+        hough_res, hough_radii, total_num_peaks=10)
     cx, cy, radii = cx[::1], cy[::1], radii[::1]
 
     cx_, cy_, radii_ = [cx[0]], [cy[0]], [radii[0]]
@@ -109,10 +111,31 @@ def minmax(numbers):
 
 def hist(radii_per_video_per_frame, fname='output.png', bin_=0.5):
     min_, max_ = minmax(radii_per_video_per_frame)
-    labels = ["%d-microlitre" % (i + 1) for i in range(len(radii_per_video_per_frame))]
+    labels = [
+        "%d-microlitre" % (i + 1)
+        for i in range(len(radii_per_video_per_frame))
+    ]
     fig, ax = plt.subplots()
-    ax.hist(radii_per_video_per_frame, bins=np.arange(min_, max_ + 1, bin_), label=labels)
+    ax.hist(
+        radii_per_video_per_frame,
+        bins=np.arange(min_, max_ + 1, bin_),
+        label=labels)
     ax.legend()
     ax.set_xlabel(r"Droplet radius ($\mu$m)")
     ax.set_ylabel("Count")
     fig.savefig(fname, dpi=600)
+
+
+def csv(radii_per_video_per_frame, fname='output.csv'):
+    maxl = 0
+    for r in radii_per_video_per_frame:
+        if len(r) > maxl:
+            maxl = len(r)
+
+    data_ = np.full((len(radii_per_video_per_frame), maxl), np.nan)
+    for i, r in enumerate(radii_per_video_per_frame):
+        for j, e in enumerate(r):
+            data_[i, j] = e
+
+    header = ['Video %d' % (d + 1) for d in range(data_.shape[0])]
+    pd.DataFrame(data_.T, columns=header).to_csv(fname, index=False)

@@ -11,8 +11,8 @@ import sys
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
-from src.video import VideoInSk, VideoOutSk
-from src.misc import determine_droplet_sizes_in_frame, hist
+from src.video import VideoInSk
+from src.misc import determine_droplet_sizes_in_frame, hist, csv
 
 CORRECTION = {
     1: np.mean([0.486, 0.442, 0.446, 0.450, 0.454]),
@@ -27,6 +27,8 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser()
     p.add_argument("--debug", default=False, action="store_true")
+    p.add_argument("--hist", default=False, action="store_true")
+    p.add_argument("--csv", default=False, action="store_true")
     #  p.add_argument("-o", "--output", help="Path for the output video file")
     p.add_argument("videos", nargs="+", help="Path to a video file")
     args = p.parse_args()
@@ -42,4 +44,7 @@ if __name__ == "__main__":
             radii_per_video_per_frame[-1].extend(radii)
         logger.info("Droplets counted in last video: %d", len(radii_per_video_per_frame[-1]))
 
-    hist(radii_per_video_per_frame)
+    if args.hist:
+        hist(radii_per_video_per_frame)
+    if args.csv:
+        csv(radii_per_video_per_frame)

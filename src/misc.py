@@ -6,8 +6,7 @@ from skimage import color
 from skimage.draw import circle_perimeter
 from skimage.feature import canny
 from skimage.io import imread
-from skimage.transform import hough_circle, hough_circle_peaks, hough_line, hough_line_peaks
-from skimage.util import img_as_ubyte
+from skimage.transform import hough_circle, hough_circle_peaks  #, hough_line, hough_line_peaks
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,12 +45,6 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
             if abs(cx[i] - x) <= thres and abs(cy[i] - y) <= thres:
                 keeper = False
                 break
-    #
-    #      if subframe[cy[i], cx[i]] > 0.4:
-    #          keeper = False
-    #
-    #      if cx[i] < 50 or cy[i] < 50 or cy[i] > box[3] - 50:
-    #          keeper = False
 
         if keeper:
             cx_.append(cx[i])
@@ -92,7 +85,7 @@ def determine_droplet_sizes_in_frame(frame, debug=False):
     return radii, frame
 
 
-def imshow(frame, cmap=plt.cm.gray):
+def imshow(frame, cmap='gray'):
     fig, ax = plt.subplots()
     ax.imshow(frame, cmap=cmap)
     plt.show()

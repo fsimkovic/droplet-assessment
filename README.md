@@ -1,4 +1,4 @@
-# Droplet size counter & calculator
+# Droplet size analysis tool 
 
 ## Installation
 
@@ -9,9 +9,17 @@ $ pip install -r requirements.txt
 ## Execution
 
 ```bash
-$ ./main data/vides/1-microlitre.mp4
+$ ./main data/videos/1-microlitre.mp4
 ```
 
 ```bash
-$ ./main --debug data/vides/1-microlitre.mp4
+$ ./main --debug data/videos/1-microlitre.mp4
 ```
+
+```bash
+$ ./main --csv data/videos/1-microlitre.mp4 data/videos/2-microlitre.mp4
+```
+
+## Reference
+If this tool helped you in your research, please cite:
+

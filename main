@@ -29,7 +29,6 @@ if __name__ == "__main__":
     p.add_argument("--debug", default=False, action="store_true")
     p.add_argument("--hist", default=False, action="store_true")
     p.add_argument("--csv", default=False, action="store_true")
-    #  p.add_argument("-o", "--output", help="Path for the output video file")
     p.add_argument("videos", nargs="+", help="Path to a video file")
     args = p.parse_args()
 
